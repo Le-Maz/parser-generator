@@ -18,7 +18,7 @@ impl<SymbolType: SymbolMetadata> Parser<SymbolType> {
     pub fn parse(&mut self) -> Result<SymbolType, String> {
         let mut stack = Vec::new();
         while self.symbols.len() > 1 {
-            let symbol = SymbolMetadata::reduce(self.symbols.as_slices().0);
+            let symbol = SymbolMetadata::reduce(self.symbols.make_contiguous());
             if let Some((n, symbol)) = symbol {
                 for _ in 0..n {
                     self.symbols.pop_front();
