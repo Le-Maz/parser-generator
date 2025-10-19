@@ -11,9 +11,10 @@ macro_rules! parser {
         $symbol_vis:vis $symbol_enum:ident:
             $($symbol:ident = $($symbol_case:ident($($part:ident $part_binding:ident)*))|*),*;
     ) => {
+        #[allow(unused)]
         #[derive(Debug, Clone)]
         $token_vis enum $token_enum<'source> {
-            $($token_variant(#[allow(unused)] &'source str)),*
+            $($token_variant(&'source str)),*
         }
 
         impl <'source> $crate::lexer::TokenMetadata<'source> for $token_enum<'source> {
@@ -33,13 +34,14 @@ macro_rules! parser {
             }
         }
         $(
+            #[allow(unused)]
             #[derive(Debug, Clone)]
-            $symbol_vis struct $token_variant<'tokens>(#[allow(unused)] &'tokens str);
+            $symbol_vis struct $token_variant<'tokens>(&'tokens str);
         )*
         $(
             #[derive(Debug, Clone)]
             $symbol_vis enum $symbol<'tokens> {
-                $($symbol_case{$(#[allow(unused)] $part_binding: ::std::rc::Rc<$part<'tokens>>),*}),*,
+                $($symbol_case{$($part_binding: ::std::rc::Rc<$part<'tokens>>),*}),*,
             }
         )*
         #[derive(Debug, Clone)]
@@ -60,13 +62,14 @@ macro_rules! parser {
             }
         }
         impl <'tokens> $crate::parser::SymbolMetadata for $symbol_enum<'tokens> {
+            #[allow(dropping_references)]
             fn reduce(slice: &[Self]) -> Option<(usize, Self)> {
                 match &slice {
                     $(
                         $(
                             &[$($symbol_enum::$part($part_binding),)* ..] => {
                                 Some((
-                                    [$(#[allow(dropping_references)] drop($part_binding),)*].len(),
+                                    [$(drop($part_binding),)*].len(),
                                     $symbol_enum::$symbol(::std::rc::Rc::new($symbol::$symbol_case{$($part_binding: $part_binding.clone()),*}))
                                 ))
                             },
@@ -92,13 +95,13 @@ mod test {
             OpAdd = r"[+]",
             OpSub = r"[-]";
         pub Symbol:
-            Expr = Num(Num num)
-                 | Paren(LParen lparen Expr inner RParen rparen)
-                 | BinOp(Expr lhs BinOp op Expr rhs),
-            BinOp = OpAdd(OpAdd op)
-                  | OpSub(OpSub op),
-            Num = Int(Int value)
-                | Float(Float value);
+            Expr = Num(Num _num)
+                 | Paren(LParen _lparen Expr _inner RParen _rparen)
+                 | BinOp(Expr _lhs BinOp _op Expr _rhs),
+            BinOp = Add(OpAdd _op)
+                  | Sub(OpSub _op),
+            Num = Int(Int _value)
+                | Float(Float _value);
     }
 
     #[test]
