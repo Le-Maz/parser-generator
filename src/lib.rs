@@ -4,10 +4,10 @@ pub mod lexer;
 pub mod parser;
 
 #[macro_export]
-macro_rules! parser {
+macro_rules! grammar {
     (
         $token_vis:vis $token_enum:ident:
-            $($token_variant:ident = $token_regex:literal),*;
+            $($token_variant:ident = $token_regex:literal),+;
         $symbol_vis:vis $symbol_enum:ident:
             $($symbol:ident = $($symbol_case:ident($($part:ident $part_binding:ident)*))|*),*;
     ) => {
@@ -35,7 +35,7 @@ macro_rules! parser {
         }
         $(
             #[allow(unused)]
-            #[derive(Debug, Clone)]
+            #[derive(Debug, Clone, Copy)]
             $symbol_vis struct $token_variant<'tokens>(&'tokens str);
         )*
         $(
@@ -86,7 +86,7 @@ macro_rules! parser {
 mod test {
     use crate::{lexer::Lexer, parser::Parser};
 
-    crate::parser! {
+    crate::grammar! {
         pub Token:
             LParen = r"[(]",
             RParen = r"[)]",
