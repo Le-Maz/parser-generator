@@ -18,19 +18,13 @@ macro_rules! grammar {
         }
 
         impl <'source> $crate::lexer::TokenMetadata<'source> for $token_enum<'source> {
-            fn get_regex() -> String {
-                let mut buffer = String::new();
-                for pattern in [$($token_regex),*] {
-                    buffer.push('(');
-                    buffer.push_str(pattern);
-                    buffer.push(')');
-                    buffer.push('|');
-                }
-                buffer.pop();
-                buffer
+            fn get_regex() -> &'source str {
+                const REGEX: &str = &concat!($('|', '(', $token_regex, ')'),*);
+                &REGEX[1..]
             }
-            fn get_token_mappers() -> Box<[fn(&'source str) -> $token_enum<'source>]> {
-                Box::new([$($token_enum::$token_variant),*])
+            fn get_token_mappers() -> &'source [fn(&'source str) -> $token_enum<'source>] {
+                const MAPPERS: &[for<'source> fn(&'source str) -> $token_enum<'source>] = &[$(|text| $token_enum::$token_variant(text)),*];
+                &MAPPERS
             }
         }
         $(

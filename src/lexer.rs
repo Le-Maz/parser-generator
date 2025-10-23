@@ -1,10 +1,10 @@
 use regex::Regex;
 
-type TokenMappers<'source, TokenType> = Box<[fn(&'source str) -> TokenType]>;
+type TokenMappers<'source, TokenType> = &'source [fn(&'source str) -> TokenType];
 
 pub struct Lexer<'source, TokenType> {
     text: &'source str,
-    regex: regex::Regex,
+    regex: Regex,
     token_mappers: TokenMappers<'source, TokenType>,
     cursor: usize,
 }
@@ -28,7 +28,7 @@ impl<'source, TokenType> Iterator for Lexer<'source, TokenType> {
 }
 
 pub trait TokenMetadata<'source> {
-    fn get_regex() -> String;
+    fn get_regex() -> &'source str;
     fn get_token_mappers() -> TokenMappers<'source, Self>;
 }
 
@@ -36,7 +36,7 @@ impl<'source, TokenType: TokenMetadata<'source>> Lexer<'source, TokenType> {
     pub fn new(text: &'source str) -> Result<Self, regex::Error> {
         Ok(Lexer {
             text,
-            regex: Regex::new(&TokenType::get_regex())?,
+            regex: Regex::new(TokenType::get_regex())?,
             token_mappers: TokenType::get_token_mappers(),
             cursor: 0,
         })
