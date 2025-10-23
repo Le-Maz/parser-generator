@@ -1,10 +1,15 @@
+use std::{
+    collections::HashMap,
+    sync::{LazyLock, nonpoison::Mutex},
+};
+
 use regex::Regex;
 
 type TokenMappers<'source, TokenType> = &'source [fn(&'source str) -> TokenType];
 
 pub struct Lexer<'source, TokenType> {
     text: &'source str,
-    regex: Regex,
+    regex: &'static Regex,
     token_mappers: TokenMappers<'source, TokenType>,
     cursor: usize,
 }
@@ -28,15 +33,30 @@ impl<'source, TokenType> Iterator for Lexer<'source, TokenType> {
 }
 
 pub trait TokenMetadata<'source> {
-    fn get_regex() -> &'source str;
+    fn get_regex() -> &'static str;
     fn get_token_mappers() -> TokenMappers<'source, Self>;
 }
 
+static CACHED_REGEXES: LazyLock<
+    Mutex<HashMap<&'static str, &'static Result<Regex, regex::Error>>>,
+> = LazyLock::new(|| Mutex::new(HashMap::new()));
+
 impl<'source, TokenType: TokenMetadata<'source>> Lexer<'source, TokenType> {
-    pub fn new(text: &'source str) -> Result<Self, regex::Error> {
+    fn cached_regex() -> &'static Result<Regex, regex::Error> {
+        let regex = TokenType::get_regex();
+        CACHED_REGEXES
+            .lock()
+            .entry(regex)
+            .or_insert_with(|| Box::leak(Box::new(Regex::new(regex))))
+    }
+    pub fn new(text: &'source str) -> Result<Self, &'static regex::Error> {
+        let regex = match Self::cached_regex() {
+            Ok(regex) => regex,
+            Err(error) => return Err(error),
+        };
         Ok(Lexer {
             text,
-            regex: Regex::new(TokenType::get_regex())?,
+            regex,
             token_mappers: TokenType::get_token_mappers(),
             cursor: 0,
         })
